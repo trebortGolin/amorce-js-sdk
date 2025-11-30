@@ -1,5 +1,5 @@
 /**
- * Nexus Identity Module (Task 2.2 - Enhanced for v0.1.7)
+ * Amorce Identity Module (Task 2.2 - Enhanced for v0.1.7)
  * Handles Ed25519 key management and signing using libsodium.
  * Compatible with both Browser and Node.js environments.
  * 
@@ -11,7 +11,7 @@
  */
 
 import sodium from 'libsodium-wrappers';
-import { NexusSecurityError } from './exceptions';
+import { AmorceSecurityError } from './exceptions';
 
 /**
  * Abstract base class for retrieving private keys.
@@ -42,7 +42,7 @@ export class EnvVarProvider implements IdentityProvider {
     }
 
     if (!pemData) {
-      throw new NexusSecurityError(`Environment variable ${this.envVarName} is not set.`);
+      throw new AmorceSecurityError(`Environment variable ${this.envVarName} is not set.`);
     }
 
     // Handle cases where newlines are escaped (common in some CI/CD)
@@ -51,7 +51,7 @@ export class EnvVarProvider implements IdentityProvider {
     try {
       return this.pemToPrivateKey(pemData);
     } catch (e) {
-      throw new NexusSecurityError(`Failed to load key from environment variable: ${e}`);
+      throw new AmorceSecurityError(`Failed to load key from environment variable: ${e}`);
     }
   }
 
@@ -72,7 +72,7 @@ export class EnvVarProvider implements IdentityProvider {
       return fullBytes.slice(16, 48);
     }
 
-    throw new NexusSecurityError('Invalid private key format');
+    throw new AmorceSecurityError('Invalid private key format');
   }
 }
 

@@ -1,16 +1,16 @@
 /**
- * Nexus Exceptions Module
- * Defines custom exceptions for the Nexus SDK to allow fine-grained error handling.
+ * Amorce Exceptions Module
+ * Defines custom exceptions for the Amorce SDK to allow fine-grained error handling.
  * Matches the exception hierarchy from nexus-py-sdk v0.1.7
  */
 
 /**
- * Base class for all Nexus SDK exceptions.
+ * Base class for all Amorce SDK exceptions.
  */
-export class NexusError extends Error {
+export class AmorceError extends Error {
     constructor(message: string) {
         super(message);
-        this.name = 'NexusError';
+        this.name = 'AmorceError';
         // Maintains proper stack trace for where our error was thrown (only available on V8)
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
@@ -21,33 +21,33 @@ export class NexusError extends Error {
 /**
  * Raised when there is a configuration issue (e.g. invalid URL, missing key).
  */
-export class NexusConfigError extends NexusError {
+export class AmorceConfigError extends AmorceError {
     constructor(message: string) {
         super(message);
-        this.name = 'NexusConfigError';
+        this.name = 'AmorceConfigError';
     }
 }
 
 /**
  * Raised when a network operation fails (e.g. connection timeout, DNS error).
  */
-export class NexusNetworkError extends NexusError {
+export class AmorceNetworkError extends AmorceError {
     constructor(message: string) {
         super(message);
-        this.name = 'NexusNetworkError';
+        this.name = 'AmorceNetworkError';
     }
 }
 
 /**
- * Raised when the Nexus API returns an error response (4xx, 5xx).
+ * Raised when the Amorce API returns an error response (4xx, 5xx).
  */
-export class NexusAPIError extends NexusError {
+export class AmorceAPIError extends AmorceError {
     public statusCode?: number;
     public responseBody?: string;
 
     constructor(message: string, statusCode?: number, responseBody?: string) {
         super(message);
-        this.name = 'NexusAPIError';
+        this.name = 'AmorceAPIError';
         this.statusCode = statusCode;
         this.responseBody = responseBody;
     }
@@ -56,19 +56,19 @@ export class NexusAPIError extends NexusError {
 /**
  * Raised when a security-related operation fails (e.g. signing, key loading).
  */
-export class NexusSecurityError extends NexusError {
+export class AmorceSecurityError extends AmorceError {
     constructor(message: string) {
         super(message);
-        this.name = 'NexusSecurityError';
+        this.name = 'AmorceSecurityError';
     }
 }
 
 /**
  * Raised when data validation fails (e.g. invalid envelope structure).
  */
-export class NexusValidationError extends NexusError {
+export class AmorceValidationError extends AmorceError {
     constructor(message: string) {
         super(message);
-        this.name = 'NexusValidationError';
+        this.name = 'AmorceValidationError';
     }
 }

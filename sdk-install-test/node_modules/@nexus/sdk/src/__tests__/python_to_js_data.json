@@ -1,0 +1,15 @@
+{
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAN/MFunhBqEo/Gz5vAdnxVwAr8LNt5Be9BlkOQfMoYyA=\n-----END PUBLIC KEY-----\n",
+  "agent_id": "8e724206386dc6ab4651e6da0de26bfaaf00a275ed2a97cbb3b674b451d30cc8",
+  "payload": {
+    "service_id": "srv_test_002",
+    "consumer_agent_id": "8e724206386dc6ab4651e6da0de26bfaaf00a275ed2a97cbb3b674b451d30cc8",
+    "payload": {
+      "intent": "cross_sdk_test",
+      "message": "Hello from Python SDK!"
+    },
+    "priority": "normal"
+  },
+  "signature": "w+4NYS79Gh2ZED5/xK9oxLPN3v77XIQ5sWmo9HYIHqbAqBvYAN4POKkkCft1ADnIORDXTZRBvrk4LTXhHerWCw==",
+  "canonical_json": "{\"consumer_agent_id\":\"8e724206386dc6ab4651e6da0de26bfaaf00a275ed2a97cbb3b674b451d30cc8\",\"payload\":{\"intent\":\"cross_sdk_test\",\"message\":\"Hello from Python SDK!\"},\"priority\":\"normal\",\"service_id\":\"srv_test_002\"}"
+}

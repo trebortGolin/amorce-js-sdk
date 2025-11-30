@@ -1,11 +1,11 @@
 import { createServer, Server } from 'http';
 import { AddressInfo } from 'net';
-import { IdentityManager, NexusClient } from '../index';
+import { IdentityManager, AmorceClient } from '../index';
 /**
  * TEST D'INTÉGRATION : RÉSILIENCE & PRIORITÉ
  * Simule un Orchestrateur instable pour valider le retry automatique et le nouveau protocole v0.1.7.
  */
-describe('Nexus JS SDK Integration', () => {
+describe('Amorce JS SDK Integration', () => {
   let server: Server;
   let port: number;
   let baseUrl: string;
@@ -68,7 +68,7 @@ describe('Nexus JS SDK Integration', () => {
     // A. Initialisation du Client
     const identity = await IdentityManager.generate();
     // On pointe le client vers notre serveur local capricieux
-    const client = new NexusClient(identity, baseUrl, baseUrl, 'agent-js-007');
+    const client = new AmorceClient(identity, baseUrl, baseUrl, 'agent-js-007');
 
     // B. Exécution de la Transaction
     // On demande une priorité 'high' pour vérifier que le champ passe bien

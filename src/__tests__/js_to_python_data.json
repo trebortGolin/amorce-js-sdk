@@ -1,0 +1,15 @@
+{
+  "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAe83vIP1PG2YHnnAxv4DNzCjCj7fJU1jgnoB36d79pC8=\n-----END PUBLIC KEY-----\n",
+  "agent_id": "364f5c4b761b39f76b18ccae3de5862b3ca588aa15b12127a7a7d136972a4d8e",
+  "payload": {
+    "service_id": "srv_test_001",
+    "consumer_agent_id": "364f5c4b761b39f76b18ccae3de5862b3ca588aa15b12127a7a7d136972a4d8e",
+    "payload": {
+      "intent": "cross_sdk_test",
+      "message": "Hello from JavaScript SDK!"
+    },
+    "priority": "normal"
+  },
+  "signature": "7xVIeHRYCjcMVZhW0OpSifsSdkMhCWKaN1jjhWfvYug7a9rDFFXbuYzkSD4WBaxpN6qyQ6YfY0wZzzAjsgNBAw==",
+  "canonical_json": "{\"consumer_agent_id\":\"364f5c4b761b39f76b18ccae3de5862b3ca588aa15b12127a7a7d136972a4d8e\",\"payload\":{\"intent\":\"cross_sdk_test\",\"message\":\"Hello from JavaScript SDK!\"},\"priority\":\"normal\",\"service_id\":\"srv_test_001\"}"
+}

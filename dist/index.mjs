@@ -6,45 +6,45 @@ var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require
 });
 
 // src/exceptions.ts
-var NexusError = class extends Error {
+var AmorceError = class extends Error {
   constructor(message) {
     super(message);
-    this.name = "NexusError";
+    this.name = "AmorceError";
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
     }
   }
 };
-var NexusConfigError = class extends NexusError {
+var AmorceConfigError = class extends AmorceError {
   constructor(message) {
     super(message);
-    this.name = "NexusConfigError";
+    this.name = "AmorceConfigError";
   }
 };
-var NexusNetworkError = class extends NexusError {
+var AmorceNetworkError = class extends AmorceError {
   constructor(message) {
     super(message);
-    this.name = "NexusNetworkError";
+    this.name = "AmorceNetworkError";
   }
 };
-var NexusAPIError = class extends NexusError {
+var AmorceAPIError = class extends AmorceError {
   constructor(message, statusCode, responseBody) {
     super(message);
-    this.name = "NexusAPIError";
+    this.name = "AmorceAPIError";
     this.statusCode = statusCode;
     this.responseBody = responseBody;
   }
 };
-var NexusSecurityError = class extends NexusError {
+var AmorceSecurityError = class extends AmorceError {
   constructor(message) {
     super(message);
-    this.name = "NexusSecurityError";
+    this.name = "AmorceSecurityError";
   }
 };
-var NexusValidationError = class extends NexusError {
+var AmorceValidationError = class extends AmorceError {
   constructor(message) {
     super(message);
-    this.name = "NexusValidationError";
+    this.name = "AmorceValidationError";
   }
 };
 
@@ -61,13 +61,13 @@ var EnvVarProvider = class {
       pemData = process.env[this.envVarName];
     }
     if (!pemData) {
-      throw new NexusSecurityError(`Environment variable ${this.envVarName} is not set.`);
+      throw new AmorceSecurityError(`Environment variable ${this.envVarName} is not set.`);
     }
     pemData = pemData.replace(/\\n/g, "\n");
     try {
       return this.pemToPrivateKey(pemData);
     } catch (e) {
-      throw new NexusSecurityError(`Failed to load key from environment variable: ${e}`);
+      throw new AmorceSecurityError(`Failed to load key from environment variable: ${e}`);
     }
   }
   pemToPrivateKey(pem) {
@@ -76,7 +76,7 @@ var EnvVarProvider = class {
     if (fullBytes.length >= 48) {
       return fullBytes.slice(16, 48);
     }
-    throw new NexusSecurityError("Invalid private key format");
+    throw new AmorceSecurityError("Invalid private key format");
   }
 };
 var IdentityManager = class _IdentityManager {
@@ -197,11 +197,11 @@ ${b64}
 import stringify from "fast-json-stable-stringify";
 import { v4 as uuidv4 } from "uuid";
 import sodium2 from "libsodium-wrappers";
-var NexusEnvelope = class _NexusEnvelope {
+var AmorceEnvelope = class _AmorceEnvelope {
   constructor(sender, payload, priority = "normal") {
     this.natp_version = "0.1.0";
     if (!["normal", "high", "critical"].includes(priority)) {
-      throw new NexusValidationError(
+      throw new AmorceValidationError(
         `Invalid priority: ${priority}. Must be 'normal', 'high', or 'critical'.`
       );
     }
@@ -244,19 +244,19 @@ var NexusEnvelope = class _NexusEnvelope {
    */
   async verify() {
     if (!this.signature) {
-      throw new NexusValidationError("Envelope has no signature");
+      throw new AmorceValidationError("Envelope has no signature");
     }
     await sodium2.ready;
     try {
       const canonicalBytes = this.getCanonicalJson();
-      const publicKeyBytes = _NexusEnvelope.pemToBytes(this.sender.public_key);
+      const publicKeyBytes = _AmorceEnvelope.pemToBytes(this.sender.public_key);
       return IdentityManager.verify(canonicalBytes, this.signature, publicKeyBytes);
     } catch (e) {
-      throw new NexusValidationError(`Verification failed: ${e}`);
+      throw new AmorceValidationError(`Verification failed: ${e}`);
     }
   }
 };
-var Envelope = NexusEnvelope;
+var Envelope = AmorceEnvelope;
 
 // src/client.ts
 import originalFetch from "cross-fetch";
@@ -267,14 +267,14 @@ var PriorityLevel = class {
 PriorityLevel.NORMAL = "normal";
 PriorityLevel.HIGH = "high";
 PriorityLevel.CRITICAL = "critical";
-var NexusClient = class {
+var AmorceClient = class {
   constructor(identity, directoryUrl, orchestratorUrl, agentId, apiKey) {
     this.identity = identity;
     if (!directoryUrl.startsWith("http://") && !directoryUrl.startsWith("https://")) {
-      throw new NexusConfigError(`Invalid directory_url: ${directoryUrl}`);
+      throw new AmorceConfigError(`Invalid directory_url: ${directoryUrl}`);
     }
     if (!orchestratorUrl.startsWith("http://") && !orchestratorUrl.startsWith("https://")) {
-      throw new NexusConfigError(`Invalid orchestrator_url: ${orchestratorUrl}`);
+      throw new AmorceConfigError(`Invalid orchestrator_url: ${orchestratorUrl}`);
     }
     this.directoryUrl = directoryUrl.replace(/\/$/, "");
     this.orchestratorUrl = orchestratorUrl.replace(/\/$/, "");
@@ -299,7 +299,7 @@ var NexusClient = class {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new NexusAPIError(
+        throw new AmorceAPIError(
           `Discovery API error: ${response.status}`,
           response.status,
           errorText
@@ -307,10 +307,10 @@ var NexusClient = class {
       }
       return await response.json();
     } catch (e) {
-      if (e instanceof NexusAPIError) {
+      if (e instanceof AmorceAPIError) {
         throw e;
       }
-      throw new NexusNetworkError(`Discovery network error: ${e}`);
+      throw new AmorceNetworkError(`Discovery network error: ${e}`);
     }
   }
   /**
@@ -320,7 +320,7 @@ var NexusClient = class {
    */
   async transact(serviceContract, payload, priority = PriorityLevel.NORMAL) {
     if (!serviceContract.service_id) {
-      throw new NexusConfigError("Invalid service contract: missing service_id");
+      throw new AmorceConfigError("Invalid service contract: missing service_id");
     }
     const requestBody = {
       service_id: serviceContract.service_id,
@@ -352,7 +352,7 @@ var NexusClient = class {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new NexusAPIError(
+        throw new AmorceAPIError(
           `Transaction failed with status ${response.status}`,
           response.status,
           errorText
@@ -360,31 +360,31 @@ var NexusClient = class {
       }
       return await response.json();
     } catch (e) {
-      if (e instanceof NexusAPIError) {
+      if (e instanceof AmorceAPIError) {
         throw e;
       }
-      throw new NexusNetworkError(`Transaction network error: ${e}`);
+      throw new AmorceNetworkError(`Transaction network error: ${e}`);
     }
   }
 };
 
 // src/index.ts
 var SDK_VERSION = "0.1.7";
-var NATP_VERSION = "0.1.0";
-console.log(`Nexus JS SDK v${SDK_VERSION} loaded.`);
+var AATP_VERSION = "0.1.0";
+console.log(`Amorce JS SDK v${SDK_VERSION} loaded.`);
 export {
+  AATP_VERSION,
+  AmorceAPIError,
+  AmorceClient,
+  AmorceConfigError,
+  AmorceEnvelope,
+  AmorceError,
+  AmorceNetworkError,
+  AmorceSecurityError,
+  AmorceValidationError,
   EnvVarProvider,
   Envelope,
   IdentityManager,
-  NATP_VERSION,
-  NexusAPIError,
-  NexusClient,
-  NexusConfigError,
-  NexusEnvelope,
-  NexusError,
-  NexusNetworkError,
-  NexusSecurityError,
-  NexusValidationError,
   PriorityLevel,
   SDK_VERSION
 };

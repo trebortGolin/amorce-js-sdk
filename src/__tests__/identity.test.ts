@@ -13,7 +13,7 @@ describe('IdentityManager', () => {
 
   test('should sign and verify a message', async () => {
     const identity = await IdentityManager.generate();
-    const message = "Hello Nexus Protocol";
+    const message = "Hello Amorce Protocol";
 
     // Sign
     const signature = await identity.sign(message);

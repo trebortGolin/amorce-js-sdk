@@ -1,7 +1,7 @@
 {
-    "name": "@nexus/sdk",
-    "version": "0.1.7",
-    "description": "Official TypeScript/JavaScript SDK for the Nexus Agent Transaction Protocol (NATP)",
+    "name": "@amorce/sdk",
+    "version": "2.0.0",
+    "description": "Official TypeScript/JavaScript SDK for the Amorce Agent Transaction Protocol (AATP)",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "types": "./dist/index.d.ts",
@@ -18,11 +18,13 @@
         "lint": "eslint src/"
     },
     "keywords": [
-        "nexus",
+        "amorce",
         "agent",
         "protocol",
-        "natp",
-        "sdk"
+        "aatp",
+        "sdk",
+        "ai-agents",
+        "zero-trust"
     ],
     "author": "Athena Architecture",
     "license": "MIT",

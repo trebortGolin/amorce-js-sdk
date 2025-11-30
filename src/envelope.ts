@@ -1,6 +1,6 @@
 /**
- * Nexus Envelope (Task 2.3 - Updated for v0.1.7)
- * Defines the strict NATP v0.1 data structure.
+ * Amorce Envelope (Task 2.3 - Updated for v0.1.7)
+ * Defines the strict AATP v0.1 data structure.
  * Handles canonical serialization and signing.
  * 
  * v0.1.7 Updates:
@@ -16,10 +16,10 @@ import stringify from 'fast-json-stable-stringify';
 import { v4 as uuidv4 } from 'uuid';
 import sodium from 'libsodium-wrappers';
 import { IdentityManager } from './identity';
-import { NexusValidationError } from './exceptions';
+import { AmorceValidationError } from './exceptions';
 
 // Define strict types for priority
-export type NexusPriority = 'normal' | 'high' | 'critical';
+export type AmorcePriority = 'normal' | 'high' | 'critical';
 
 export interface SenderInfo {
   public_key: string; // PEM format
@@ -32,10 +32,10 @@ export interface SettlementInfo {
   facilitation_fee: number;
 }
 
-export class NexusEnvelope {
+export class AmorceEnvelope {
   natp_version: string = "0.1.0";
   id: string;
-  priority: NexusPriority;
+  priority: AmorcePriority;
   timestamp: number;
   sender: SenderInfo;
   payload: Record<string, any>;
@@ -45,11 +45,11 @@ export class NexusEnvelope {
   constructor(
     sender: SenderInfo,
     payload: Record<string, any>,
-    priority: NexusPriority = 'normal'
+    priority: AmorcePriority = 'normal'
   ) {
     // Validate priority
     if (!['normal', 'high', 'critical'].includes(priority)) {
-      throw new NexusValidationError(
+      throw new AmorceValidationError(
         `Invalid priority: ${priority}. Must be 'normal', 'high', or 'critical'.`
       );
     }
@@ -111,21 +111,21 @@ export class NexusEnvelope {
    */
   public async verify(): Promise<boolean> {
     if (!this.signature) {
-      throw new NexusValidationError('Envelope has no signature');
+      throw new AmorceValidationError('Envelope has no signature');
     }
 
     await sodium.ready;
 
     try {
       const canonicalBytes = this.getCanonicalJson();
-      const publicKeyBytes = NexusEnvelope.pemToBytes(this.sender.public_key);
+      const publicKeyBytes = AmorceEnvelope.pemToBytes(this.sender.public_key);
 
       return IdentityManager.verify(canonicalBytes, this.signature, publicKeyBytes);
     } catch (e) {
-      throw new NexusValidationError(`Verification failed: ${e}`);
+      throw new AmorceValidationError(`Verification failed: ${e}`);
     }
   }
 }
 
 // DX ALIAS: For simpler imports
-export const Envelope = NexusEnvelope;
+export const Envelope = AmorceEnvelope;

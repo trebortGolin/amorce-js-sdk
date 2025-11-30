@@ -1,11 +1,11 @@
-# Nexus TypeScript/JavaScript SDK (NATP)
+# Amorce TypeScript/JavaScript SDK (AATP)
 
 [![npm version](https://img.shields.io/npm/v/@nexus/sdk.svg)](https://www.npmjs.com/package/@nexus/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Official TypeScript/JavaScript SDK for the Nexus Agent Transaction Protocol (NATP).**
+**Official TypeScript/JavaScript SDK for the Amorce Agent Transaction Protocol (AATP).**
 
-The Nexus SDK allows any JavaScript application (Node.js or Browser) to become a verified node in the **Agent Economy**. It provides the cryptographic primitives (Ed25519 via `libsodium`) and the transport layer required to transact securely with AI Agents (OpenAI, Google Gemini, Apple Intelligence).
+The Amorce SDK allows any JavaScript application (Node.js or Browser) to become a verified node in the **Agent Economy**. It provides the cryptographic primitives (Ed25519 via `libsodium`) and the transport layer required to transact securely with AI Agents (OpenAI, Google Gemini, Apple Intelligence).
 
 ---
 
@@ -16,7 +16,7 @@ The Nexus SDK allows any JavaScript application (Node.js or Browser) to become a
 * **Priority Lane**: Mark critical messages (`high`, `critical`) to bypass network congestion.
 * **Resilience**: Automatic retry logic with exponential backoff for unstable networks (handles 503, 429).
 * **Developer Experience (v0.1.7)**: Simplified `IdentityManager` with auto-derived Agent IDs and provider pattern.
-* **Robust Error Handling**: Specific exceptions (`NexusNetworkError`, `NexusAPIError`) for reliable production code.
+* **Robust Error Handling**: Specific exceptions (`AmorceNetworkError`, `AmorceAPIError`) for reliable production code.
 * **Isomorphic**: Works in Node.js and Modern Browsers.
 * **Type Safe**: Native TypeScript support for robust development.
 
@@ -69,15 +69,15 @@ console.log(`Agent ID: ${identity.getAgentId()}`);
 
 ### 2. Sending a Transaction (Full Example)
 
-Use the `NexusClient` to discover services and execute transactions.
+Use the `AmorceClient` to discover services and execute transactions.
 
 ```typescript
 import { 
-  NexusClient, 
+  AmorceClient, 
   IdentityManager, 
   PriorityLevel,
-  NexusNetworkError,
-  NexusAPIError 
+  AmorceNetworkError,
+  AmorceAPIError 
 } from '@nexus/sdk';
 
 // Configuration (Use Env Vars in Prod!)
@@ -89,7 +89,7 @@ const identity = await IdentityManager.generate();
 
 // 2. Initialize the client
 // Note: 'agent_id' is automatically derived from the identity object.
-const client = new NexusClient(
+const client = new AmorceClient(
   identity,
   DIRECTORY_URL,
   ORCHESTRATOR_URL
@@ -119,9 +119,9 @@ try {
     console.log(`⚠️ Server Error:`, response);
   }
 } catch (e) {
-  if (e instanceof NexusNetworkError) {
+  if (e instanceof AmorceNetworkError) {
     console.error(`❌ Network Error (Retryable):`, e.message);
-  } else if (e instanceof NexusAPIError) {
+  } else if (e instanceof AmorceAPIError) {
     console.error(`❌ API Error ${e.statusCode}:`, e.responseBody);
   } else {
     console.error(`❌ Unexpected Error:`, e);
@@ -135,20 +135,20 @@ The SDK provides specific exceptions for robust error handling:
 
 ```typescript
 import { 
-  NexusClient, 
-  NexusConfigError, 
-  NexusNetworkError, 
-  NexusAPIError 
+  AmorceClient, 
+  AmorceConfigError, 
+  AmorceNetworkError, 
+  AmorceAPIError 
 } from '@nexus/sdk';
 
 try {
   await client.transact(...);
 } catch (e) {
-  if (e instanceof NexusConfigError) {
+  if (e instanceof AmorceConfigError) {
     console.error('Configuration Error:', e.message);
-  } else if (e instanceof NexusNetworkError) {
+  } else if (e instanceof AmorceNetworkError) {
     console.error('Network Error:', e.message); // Retry might be possible
-  } else if (e instanceof NexusAPIError) {
+  } else if (e instanceof AmorceAPIError) {
     console.error(`API Error ${e.statusCode}:`, e.responseBody);
   } else {
     console.error('Unexpected Error:', e);
@@ -160,7 +160,7 @@ try {
 
 ## 🛡️ Architecture & Security
 
-The SDK implements the **NATP v0.1** standard strictly.
+The SDK implements the **AATP v0.1** standard strictly.
 
 1. **Identity**: Keys are managed via the `IdentityManager` with pluggable providers.
 2. **Canonicalization**: JSON payloads are serialized canonically (RFC 8785) to ensure signature consistency.
@@ -187,10 +187,10 @@ The signature is sent in the `X-Agent-Signature` header, not embedded in the pay
 
 ## 🔧 Troubleshooting & FAQ
 
-**Q: I get a `NexusAPIError` when transacting.**  
+**Q: I get a `AmorceAPIError` when transacting.**  
 A: Check the status code and response body in the error object. Common issues include invalid service IDs or missing API keys.
 
-**Q: I get `NexusConfigError` about invalid URLs.**  
+**Q: I get `AmorceConfigError` about invalid URLs.**  
 A: Ensure your `DIRECTORY_URL` and `ORCHESTRATOR_URL` start with `http://` or `https://`.
 
 **Q: How do I get my Agent ID?**  
@@ -222,12 +222,12 @@ A: Use build tools like Webpack or Vite that support environment variable inject
 * `getAgentId(): string` - Returns SHA-256 hash of public key (auto-derived agent ID).
 * `sign(message): Promise<string>` - Signs a message and returns base64 signature.
 
-### `NexusClient`
+### `AmorceClient`
 
 #### Constructor
 
 ```typescript
-new NexusClient(
+new AmorceClient(
   identity: IdentityManager,
   directoryUrl: string,
   orchestratorUrl: string,
@@ -243,12 +243,12 @@ new NexusClient(
 
 ### Exception Classes
 
-* `NexusError` - Base exception class
-* `NexusConfigError` - Configuration errors
-* `NexusNetworkError` - Network errors
-* `NexusAPIError` - API errors (includes `statusCode` and `responseBody`)
-* `NexusSecurityError` - Security/crypto errors
-* `NexusValidationError` - Validation errors
+* `AmorceError` - Base exception class
+* `AmorceConfigError` - Configuration errors
+* `AmorceNetworkError` - Network errors
+* `AmorceAPIError` - API errors (includes `statusCode` and `responseBody`)
+* `AmorceSecurityError` - Security/crypto errors
+* `AmorceValidationError` - Validation errors
 
 ---
 
@@ -284,7 +284,7 @@ This project is licensed under the MIT License.
 
 ## 🔗 Related Projects
 
-* [nexus-py-sdk](https://github.com/trebortGolin/nexus_py_sdk) - Python SDK for NATP
+* [nexus-py-sdk](https://github.com/trebortGolin/nexus_py_sdk) - Python SDK for AATP
 * [amorce-trust-directory](https://github.com/trebortGolin/amorce-trust-directory) - Trust Directory service
 * [nexus-console](https://github.com/trebortGolin/nexus-console) - Management console
 
@@ -299,7 +299,7 @@ This project is licensed under the MIT License.
 * Added provider pattern for flexible identity management (`EnvVarProvider`)
 * Added auto-derived Agent ID (SHA-256 of public key)
 * Added `getCanonicalJsonBytes()` static utility
-* Improved URL validation in `NexusClient` constructor
+* Improved URL validation in `AmorceClient` constructor
 * Enhanced documentation and examples
 
 ### v0.1.2

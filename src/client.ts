@@ -1,6 +1,6 @@
 /**
- * Nexus Client Module (Task 2.4 - Updated for v0.1.7)
- * High-level HTTP client for the Nexus Agent Transaction Protocol (NATP).
+ * Amorce Client Module (Task 2.4 - Updated for v0.1.7)
+ * High-level HTTP client for the Amorce Agent Transaction Protocol (AATP).
  * Encapsulates signature creation and transport using fetch with retry logic.
  * 
  * v0.1.7 Updates:
@@ -12,8 +12,8 @@
  */
 
 import { IdentityManager } from './identity';
-import { NexusPriority } from './envelope';
-import { NexusConfigError, NexusNetworkError, NexusAPIError } from './exceptions';
+import { AmorcePriority } from './envelope';
+import { AmorceConfigError, AmorceNetworkError, AmorceAPIError } from './exceptions';
 // @ts-ignore: cross-fetch types can be tricky, ignore if implicit
 import originalFetch from 'cross-fetch';
 // @ts-ignore: fetch-retry usually lacks types or has conflict, we handle it manually
@@ -27,9 +27,9 @@ const fetch = fetchRetry(originalFetch as any);
  * Matches Python SDK's PriorityLevel class.
  */
 export class PriorityLevel {
-  static readonly NORMAL: NexusPriority = 'normal';
-  static readonly HIGH: NexusPriority = 'high';
-  static readonly CRITICAL: NexusPriority = 'critical';
+  static readonly NORMAL: AmorcePriority = 'normal';
+  static readonly HIGH: AmorcePriority = 'high';
+  static readonly CRITICAL: AmorcePriority = 'critical';
 }
 
 export interface ServiceContract {
@@ -40,7 +40,7 @@ export interface ServiceContract {
   [key: string]: any;
 }
 
-export class NexusClient {
+export class AmorceClient {
   private identity: IdentityManager;
   private directoryUrl: string;
   private orchestratorUrl: string;
@@ -58,10 +58,10 @@ export class NexusClient {
 
     // Validate URLs
     if (!directoryUrl.startsWith('http://') && !directoryUrl.startsWith('https://')) {
-      throw new NexusConfigError(`Invalid directory_url: ${directoryUrl}`);
+      throw new AmorceConfigError(`Invalid directory_url: ${directoryUrl}`);
     }
     if (!orchestratorUrl.startsWith('http://') && !orchestratorUrl.startsWith('https://')) {
-      throw new NexusConfigError(`Invalid orchestrator_url: ${orchestratorUrl}`);
+      throw new AmorceConfigError(`Invalid orchestrator_url: ${orchestratorUrl}`);
     }
 
     // Remove trailing slashes for consistency
@@ -92,7 +92,7 @@ export class NexusClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new NexusAPIError(
+        throw new AmorceAPIError(
           `Discovery API error: ${response.status}`,
           response.status,
           errorText
@@ -101,10 +101,10 @@ export class NexusClient {
 
       return await response.json();
     } catch (e) {
-      if (e instanceof NexusAPIError) {
+      if (e instanceof AmorceAPIError) {
         throw e;
       }
-      throw new NexusNetworkError(`Discovery network error: ${e}`);
+      throw new AmorceNetworkError(`Discovery network error: ${e}`);
     }
   }
 
@@ -116,10 +116,10 @@ export class NexusClient {
   public async transact(
     serviceContract: ServiceContract,
     payload: Record<string, any>,
-    priority: NexusPriority = PriorityLevel.NORMAL
+    priority: AmorcePriority = PriorityLevel.NORMAL
   ): Promise<any> {
     if (!serviceContract.service_id) {
-      throw new NexusConfigError('Invalid service contract: missing service_id');
+      throw new AmorceConfigError('Invalid service contract: missing service_id');
     }
 
     // --- PROTOCOL ALIGNMENT ---
@@ -162,7 +162,7 @@ export class NexusClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new NexusAPIError(
+        throw new AmorceAPIError(
           `Transaction failed with status ${response.status}`,
           response.status,
           errorText
@@ -171,10 +171,10 @@ export class NexusClient {
 
       return await response.json();
     } catch (e) {
-      if (e instanceof NexusAPIError) {
+      if (e instanceof AmorceAPIError) {
         throw e;
       }
-      throw new NexusNetworkError(`Transaction network error: ${e}`);
+      throw new AmorceNetworkError(`Transaction network error: ${e}`);
     }
   }
 }

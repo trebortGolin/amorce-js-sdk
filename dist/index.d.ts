@@ -1,30 +1,30 @@
 /**
- * Nexus Exceptions Module
- * Defines custom exceptions for the Nexus SDK to allow fine-grained error handling.
+ * Amorce Exceptions Module
+ * Defines custom exceptions for the Amorce SDK to allow fine-grained error handling.
  * Matches the exception hierarchy from nexus-py-sdk v0.1.7
  */
 /**
- * Base class for all Nexus SDK exceptions.
+ * Base class for all Amorce SDK exceptions.
  */
-declare class NexusError extends Error {
+declare class AmorceError extends Error {
     constructor(message: string);
 }
 /**
  * Raised when there is a configuration issue (e.g. invalid URL, missing key).
  */
-declare class NexusConfigError extends NexusError {
+declare class AmorceConfigError extends AmorceError {
     constructor(message: string);
 }
 /**
  * Raised when a network operation fails (e.g. connection timeout, DNS error).
  */
-declare class NexusNetworkError extends NexusError {
+declare class AmorceNetworkError extends AmorceError {
     constructor(message: string);
 }
 /**
- * Raised when the Nexus API returns an error response (4xx, 5xx).
+ * Raised when the Amorce API returns an error response (4xx, 5xx).
  */
-declare class NexusAPIError extends NexusError {
+declare class AmorceAPIError extends AmorceError {
     statusCode?: number;
     responseBody?: string;
     constructor(message: string, statusCode?: number, responseBody?: string);
@@ -32,18 +32,18 @@ declare class NexusAPIError extends NexusError {
 /**
  * Raised when a security-related operation fails (e.g. signing, key loading).
  */
-declare class NexusSecurityError extends NexusError {
+declare class AmorceSecurityError extends AmorceError {
     constructor(message: string);
 }
 /**
  * Raised when data validation fails (e.g. invalid envelope structure).
  */
-declare class NexusValidationError extends NexusError {
+declare class AmorceValidationError extends AmorceError {
     constructor(message: string);
 }
 
 /**
- * Nexus Identity Module (Task 2.2 - Enhanced for v0.1.7)
+ * Amorce Identity Module (Task 2.2 - Enhanced for v0.1.7)
  * Handles Ed25519 key management and signing using libsodium.
  * Compatible with both Browser and Node.js environments.
  *
@@ -120,8 +120,8 @@ declare class IdentityManager {
 }
 
 /**
- * Nexus Envelope (Task 2.3 - Updated for v0.1.7)
- * Defines the strict NATP v0.1 data structure.
+ * Amorce Envelope (Task 2.3 - Updated for v0.1.7)
+ * Defines the strict AATP v0.1 data structure.
  * Handles canonical serialization and signing.
  *
  * v0.1.7 Updates:
@@ -133,7 +133,7 @@ declare class IdentityManager {
  * of wrapping everything in an envelope.
  */
 
-type NexusPriority = 'normal' | 'high' | 'critical';
+type AmorcePriority = 'normal' | 'high' | 'critical';
 interface SenderInfo {
     public_key: string;
     agent_id?: string;
@@ -143,16 +143,16 @@ interface SettlementInfo {
     currency: string;
     facilitation_fee: number;
 }
-declare class NexusEnvelope {
+declare class AmorceEnvelope {
     natp_version: string;
     id: string;
-    priority: NexusPriority;
+    priority: AmorcePriority;
     timestamp: number;
     sender: SenderInfo;
     payload: Record<string, any>;
     settlement: SettlementInfo;
     signature?: string;
-    constructor(sender: SenderInfo, payload: Record<string, any>, priority?: NexusPriority);
+    constructor(sender: SenderInfo, payload: Record<string, any>, priority?: AmorcePriority);
     /**
      * Returns the canonical JSON bytes of the envelope WITHOUT the signature.
      */
@@ -171,11 +171,11 @@ declare class NexusEnvelope {
      */
     verify(): Promise<boolean>;
 }
-declare const Envelope: typeof NexusEnvelope;
+declare const Envelope: typeof AmorceEnvelope;
 
 /**
- * Nexus Client Module (Task 2.4 - Updated for v0.1.7)
- * High-level HTTP client for the Nexus Agent Transaction Protocol (NATP).
+ * Amorce Client Module (Task 2.4 - Updated for v0.1.7)
+ * High-level HTTP client for the Amorce Agent Transaction Protocol (AATP).
  * Encapsulates signature creation and transport using fetch with retry logic.
  *
  * v0.1.7 Updates:
@@ -191,9 +191,9 @@ declare const Envelope: typeof NexusEnvelope;
  * Matches Python SDK's PriorityLevel class.
  */
 declare class PriorityLevel {
-    static readonly NORMAL: NexusPriority;
-    static readonly HIGH: NexusPriority;
-    static readonly CRITICAL: NexusPriority;
+    static readonly NORMAL: AmorcePriority;
+    static readonly HIGH: AmorcePriority;
+    static readonly CRITICAL: AmorcePriority;
 }
 interface ServiceContract {
     service_id: string;
@@ -201,7 +201,7 @@ interface ServiceContract {
     service_type: string;
     [key: string]: any;
 }
-declare class NexusClient {
+declare class AmorceClient {
     private identity;
     private directoryUrl;
     private orchestratorUrl;
@@ -217,16 +217,16 @@ declare class NexusClient {
      * FIX: Aligned with Orchestrator v1.4 protocol (Flat JSON + Header Signature).
      * Matches Python SDK's transact() method.
      */
-    transact(serviceContract: ServiceContract, payload: Record<string, any>, priority?: NexusPriority): Promise<any>;
+    transact(serviceContract: ServiceContract, payload: Record<string, any>, priority?: AmorcePriority): Promise<any>;
 }
 
 /**
- * Nexus SDK for JavaScript/TypeScript
+ * Amorce SDK for JavaScript/TypeScript
  * Version 0.1.7
  *
  * Aligned with nexus-py-sdk v0.1.7
  */
 declare const SDK_VERSION = "0.1.7";
-declare const NATP_VERSION = "0.1.0";
+declare const AATP_VERSION = "0.1.0";
 
-export { EnvVarProvider, Envelope, IdentityManager, type IdentityProvider, NATP_VERSION, NexusAPIError, NexusClient, NexusConfigError, NexusEnvelope, NexusError, NexusNetworkError, type NexusPriority, NexusSecurityError, NexusValidationError, PriorityLevel, SDK_VERSION, type SenderInfo, type ServiceContract, type SettlementInfo };
+export { AATP_VERSION, AmorceAPIError, AmorceClient, AmorceConfigError, AmorceEnvelope, AmorceError, AmorceNetworkError, type AmorcePriority, AmorceSecurityError, AmorceValidationError, EnvVarProvider, Envelope, IdentityManager, type IdentityProvider, PriorityLevel, SDK_VERSION, type SenderInfo, type ServiceContract, type SettlementInfo };

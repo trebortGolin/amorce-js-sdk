@@ -1,6 +1,6 @@
-import { IdentityManager, NexusEnvelope, SenderInfo } from '../index';
+import { IdentityManager, AmorceEnvelope, SenderInfo } from '../index';
 
-describe('NexusEnvelope', () => {
+describe('AmorceEnvelope', () => {
   let identity: IdentityManager;
 
   beforeAll(async () => {
@@ -11,7 +11,7 @@ describe('NexusEnvelope', () => {
     const sender: SenderInfo = { public_key: identity.getPublicKeyPem() };
     const payload = { message: "Hello World" };
 
-    const envelope = new NexusEnvelope(sender, payload);
+    const envelope = new AmorceEnvelope(sender, payload);
 
     expect(envelope.natp_version).toBe("0.1.0");
     expect(envelope.id).toBeDefined();
@@ -24,7 +24,7 @@ describe('NexusEnvelope', () => {
     const sender: SenderInfo = { public_key: identity.getPublicKeyPem() };
     const payload = { intent: "TEST_TRANSACTION", amount: 100 };
 
-    const envelope = new NexusEnvelope(sender, payload);
+    const envelope = new AmorceEnvelope(sender, payload);
 
     // 1. Sign
     await envelope.sign(identity);
@@ -39,7 +39,7 @@ describe('NexusEnvelope', () => {
     const sender: SenderInfo = { public_key: identity.getPublicKeyPem() };
     const payload = { sensitive_data: "original" };
 
-    const envelope = new NexusEnvelope(sender, payload);
+    const envelope = new AmorceEnvelope(sender, payload);
     await envelope.sign(identity);
 
     // Tamper with the payload AFTER signing
@@ -53,7 +53,7 @@ describe('NexusEnvelope', () => {
     const sender: SenderInfo = { public_key: identity.getPublicKeyPem() };
     const payload = { data: "ok" };
 
-    const envelope = new NexusEnvelope(sender, payload);
+    const envelope = new AmorceEnvelope(sender, payload);
     await envelope.sign(identity);
 
     // Tamper with the money
