@@ -225,4 +225,45 @@ export class IdentityManager {
     const jsonStr = stringify(payload);
     return new TextEncoder().encode(jsonStr);
   }
+
+  /**
+   * Generate agent manifest JSON for registration.
+   * This creates a signed manifest that can be submitted to the Trust Directory.
+   * 
+   * @param options - Manifest options
+   * @returns JSON string of the manifest
+   * 
+   * @example
+   * ```typescript
+   * const identity = await IdentityManager.generate();
+   * const manifest = identity.toManifestJson({
+   *   name: 'My Restaurant Bot',
+   *   endpoint: 'https://api.example.com/webhook',
+   *   capabilities: ['book_table', 'check_availability'],
+   *   description: 'Fine dining reservations'
+   * });
+   * 
+   * // Save or submit to Trust Directory
+   * fs.writeFileSync('manifest.json', manifest);
+   * ```
+   */
+  toManifestJson(options: {
+    name: string;
+    endpoint: string;
+    capabilities: string[];
+    description?: string;
+  }): string {
+    const manifest = {
+      agent_id: this.getAgentId(),
+      name: options.name,
+      public_key: this.getPublicKeyPem(),
+      endpoint: options.endpoint,
+      capabilities: options.capabilities,
+      description: options.description || '',
+      version: '1.0',
+      created_at: new Date().toISOString()
+    };
+
+    return JSON.stringify(manifest, null, 2);
+  }
 }

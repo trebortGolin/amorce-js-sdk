@@ -43,8 +43,10 @@ __export(index_exports, {
   EnvVarProvider: () => EnvVarProvider,
   Envelope: () => Envelope,
   IdentityManager: () => IdentityManager,
+  MCPToolClient: () => MCPToolClient,
   PriorityLevel: () => PriorityLevel,
-  SDK_VERSION: () => SDK_VERSION
+  SDK_VERSION: () => SDK_VERSION,
+  verifyRequest: () => verifyRequest
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -233,6 +235,40 @@ ${b64}
     const stringify2 = require("fast-json-stable-stringify");
     const jsonStr = stringify2(payload);
     return new TextEncoder().encode(jsonStr);
+  }
+  /**
+   * Generate agent manifest JSON for registration.
+   * This creates a signed manifest that can be submitted to the Trust Directory.
+   * 
+   * @param options - Manifest options
+   * @returns JSON string of the manifest
+   * 
+   * @example
+   * ```typescript
+   * const identity = await IdentityManager.generate();
+   * const manifest = identity.toManifestJson({
+   *   name: 'My Restaurant Bot',
+   *   endpoint: 'https://api.example.com/webhook',
+   *   capabilities: ['book_table', 'check_availability'],
+   *   description: 'Fine dining reservations'
+   * });
+   * 
+   * // Save or submit to Trust Directory
+   * fs.writeFileSync('manifest.json', manifest);
+   * ```
+   */
+  toManifestJson(options) {
+    const manifest = {
+      agent_id: this.getAgentId(),
+      name: options.name,
+      public_key: this.getPublicKeyPem(),
+      endpoint: options.endpoint,
+      capabilities: options.capabilities,
+      description: options.description || "",
+      version: "1.0",
+      created_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    return JSON.stringify(manifest, null, 2);
   }
 };
 
@@ -486,10 +522,370 @@ var AmorceClient = class {
       throw new AmorceNetworkError(`Transaction network error: ${e}`);
     }
   }
+  /**
+   * Request human approval for a transaction (HITL - Human-in-the-Loop).
+   * 
+   * @param options - Approval request options
+   * @returns Approval ID for tracking
+   * 
+   * @example
+   * ```typescript
+   * const approvalId = await client.requestApproval({
+   *   transactionId: 'tx_123',
+   *   summary: 'Book table for 4 guests',
+   *   details: { restaurant: 'Le Petit Bistro', date: '2025-12-05' },
+   *   timeoutSeconds: 300  // 5 minutes
+   * });
+   * ```
+   */
+  async requestApproval(options) {
+    const requestBody = {
+      transaction_id: options.transactionId,
+      summary: options.summary,
+      details: options.details,
+      timeout_seconds: options.timeoutSeconds || 300,
+      agent_id: this.agentId,
+      requested_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const canonicalBytes = IdentityManager.getCanonicalJsonBytes(requestBody);
+    const signature = await this.identity.sign(canonicalBytes);
+    const headers = {
+      "X-Agent-Signature": signature,
+      "X-Amorce-Agent-ID": this.agentId,
+      "Content-Type": "application/json"
+    };
+    const url = `${this.orchestratorUrl}/api/v1/approvals`;
+    try {
+      const response = await (0, import_undici.request)(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody)
+      });
+      if (response.statusCode !== 201 && response.statusCode !== 200) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `Failed to request approval: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+      const data = await response.body.json();
+      return data.approval_id;
+    } catch (e) {
+      if (e instanceof AmorceAPIError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`Approval request network error: ${e}`);
+    }
+  }
+  /**
+   * Check the status of an approval request.
+   * 
+   * @param approvalId - The approval ID to check
+   * @returns Approval status object
+   * 
+   * @example
+   * ```typescript
+   * const status = await client.checkApproval(approvalId);
+   * if (status.status === 'approved') {
+   *   // Proceed with transaction
+   * }
+   * ```
+   */
+  async checkApproval(approvalId) {
+    const url = `${this.orchestratorUrl}/api/v1/approvals/${approvalId}`;
+    const headers = {
+      "X-Amorce-Agent-ID": this.agentId,
+      "Content-Type": "application/json"
+    };
+    try {
+      const response = await (0, import_undici.request)(url, {
+        method: "GET",
+        headers
+      });
+      if (response.statusCode !== 200) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `Failed to check approval: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+      return await response.body.json();
+    } catch (e) {
+      if (e instanceof AmorceAPIError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`Approval check network error: ${e}`);
+    }
+  }
+  /**
+   * Submit a decision for an approval request.
+   * Typically called by the human approval interface.
+   * 
+   * @param options - Approval decision options
+   * 
+   * @example
+   * ```typescript
+   * await client.submitApproval({
+   *   approvalId: 'appr_123',
+   *   decision: 'approve',
+   *   approvedBy: 'user@example.com',
+   *   comments: 'Looks good!'
+   * });
+   * ```
+   */
+  async submitApproval(options) {
+    const requestBody = {
+      decision: options.decision,
+      approved_by: options.approvedBy,
+      comments: options.comments,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const canonicalBytes = IdentityManager.getCanonicalJsonBytes(requestBody);
+    const signature = await this.identity.sign(canonicalBytes);
+    const headers = {
+      "X-Agent-Signature": signature,
+      "X-Amorce-Agent-ID": this.agentId,
+      "Content-Type": "application/json"
+    };
+    const url = `${this.orchestratorUrl}/api/v1/approvals/${options.approvalId}/submit`;
+    try {
+      const response = await (0, import_undici.request)(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody)
+      });
+      if (response.statusCode !== 200 && response.statusCode !== 204) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `Failed to submit approval: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+    } catch (e) {
+      if (e instanceof AmorceAPIError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`Approval submission network error: ${e}`);
+    }
+  }
+};
+
+// src/verify.ts
+var import_undici2 = require("undici");
+async function verifyRequest(options) {
+  const {
+    headers,
+    body,
+    allowedIntents,
+    publicKey,
+    directoryUrl = "https://directory.amorce.io"
+  } = options;
+  const signature = headers["x-agent-signature"] || headers["X-Agent-Signature"];
+  if (!signature) {
+    throw new AmorceSecurityError("Missing X-Agent-Signature header");
+  }
+  const agentId = headers["x-amorce-agent-id"] || headers["X-Amorce-Agent-ID"];
+  if (!agentId) {
+    throw new AmorceSecurityError("Missing X-Amorce-Agent-ID header");
+  }
+  const bodyBytes = typeof body === "string" ? Buffer.from(body, "utf-8") : body;
+  let payload;
+  try {
+    const bodyStr = typeof body === "string" ? body : body.toString("utf-8");
+    payload = JSON.parse(bodyStr);
+  } catch (e) {
+    throw new AmorceValidationError(`Invalid JSON payload: ${e}`);
+  }
+  let agentPublicKey;
+  if (publicKey) {
+    agentPublicKey = publicKey;
+  } else {
+    try {
+      const url = `${directoryUrl}/api/v1/agents/${agentId}/public-key`;
+      const response = await (0, import_undici2.request)(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      if (response.statusCode !== 200) {
+        throw new AmorceSecurityError(`Agent ${agentId} not found in Trust Directory`);
+      }
+      const data = await response.body.json();
+      agentPublicKey = data.public_key;
+      if (!agentPublicKey) {
+        throw new AmorceSecurityError(`No public key found for agent ${agentId}`);
+      }
+    } catch (e) {
+      if (e instanceof AmorceSecurityError) {
+        throw e;
+      }
+      throw new AmorceSecurityError(`Failed to fetch public key from Trust Directory: ${e}`);
+    }
+  }
+  const publicKeyBytes = pemToPublicKey(agentPublicKey);
+  const isValid = await IdentityManager.verify(bodyBytes, signature, publicKeyBytes);
+  if (!isValid) {
+    throw new AmorceSecurityError("Invalid signature - request authentication failed");
+  }
+  if (allowedIntents && allowedIntents.length > 0) {
+    const intent = payload?.payload?.intent;
+    if (!intent) {
+      throw new AmorceValidationError("No intent found in payload");
+    }
+    if (!allowedIntents.includes(intent)) {
+      throw new AmorceValidationError(
+        `Intent '${intent}' not in allowed list: ${allowedIntents.join(", ")}`
+      );
+    }
+  }
+  return {
+    agentId,
+    payload,
+    signature
+  };
+}
+function pemToPublicKey(pem) {
+  const sodium3 = require("libsodium-wrappers");
+  const b64 = pem.replace("-----BEGIN PUBLIC KEY-----", "").replace("-----END PUBLIC KEY-----", "").replace(/\\s/g, "");
+  const fullBytes = sodium3.from_base64(b64, sodium3.base64_variants.ORIGINAL);
+  if (fullBytes.length >= 44) {
+    return fullBytes.slice(12, 44);
+  }
+  throw new AmorceSecurityError("Invalid public key PEM format");
+}
+
+// src/mcp.ts
+var import_undici3 = require("undici");
+var MCPToolClient = class {
+  constructor(identity, wrapperUrl) {
+    this.identity = identity;
+    this.wrapperUrl = wrapperUrl.replace(/\/$/, "");
+    this.agentId = identity.getAgentId();
+  }
+  /**
+   * List all available MCP tools across all servers.
+   * 
+   * @returns Array of available tools with metadata
+   * 
+   * @example
+   * ```typescript
+   * const tools = await mcp.listTools();
+   * for (const tool of tools) {
+   *   const hitl = tool.requiresApproval ? '🔒' : '✓';
+   *   console.log(`${hitl} ${tool.name}: ${tool.description}`);
+   * }
+   * ```
+   */
+  async listTools() {
+    const url = `${this.wrapperUrl}/mcp/tools`;
+    try {
+      const response = await (0, import_undici3.request)(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Amorce-Agent-ID": this.agentId
+        },
+        body: JSON.stringify({})
+      });
+      if (response.statusCode !== 200) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `Failed to list MCP tools: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+      const data = await response.body.json();
+      return data.tools || [];
+    } catch (e) {
+      if (e instanceof AmorceAPIError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`MCP tool listing network error: ${e}`);
+    }
+  }
+  /**
+   * Call an MCP tool with signed request.
+   * 
+   * For tools that require approval (write/delete operations), you must provide
+   * an approvalId obtained through the HITL workflow.
+   * 
+   * @param server - MCP server name (e.g., 'filesystem', 'brave-search')
+   * @param tool - Tool name (e.g., 'read_file', 'write_file')
+   * @param args - Tool-specific arguments
+   * @param approvalId - Optional approval ID for tools requiring HITL
+   * @returns Tool execution result
+   * 
+   * @throws AmorceValidationError if tool requires approval and none provided
+   * 
+   * @example
+   * ```typescript
+   * // Read operation (no approval needed)
+   * const content = await mcp.callTool('filesystem', 'read_file', {
+   *   path: '/tmp/data.txt'
+   * });
+   * 
+   * // Write operation (approval required)
+   * const approvalId = await client.requestApproval({...});
+   * await mcp.callTool('filesystem', 'write_file', {
+   *   path: '/tmp/output.txt',
+   *   content: 'Hello!'
+   * }, approvalId);
+   * ```
+   */
+  async callTool(server, tool, args, approvalId) {
+    const requestBody = {
+      server,
+      tool,
+      arguments: args,
+      approval_id: approvalId,
+      agent_id: this.agentId,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const canonicalBytes = IdentityManager.getCanonicalJsonBytes(requestBody);
+    const signature = await this.identity.sign(canonicalBytes);
+    const url = `${this.wrapperUrl}/mcp/call`;
+    try {
+      const response = await (0, import_undici3.request)(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Agent-Signature": signature,
+          "X-Amorce-Agent-ID": this.agentId
+        },
+        body: JSON.stringify(requestBody)
+      });
+      if (response.statusCode === 403) {
+        const errorText = await response.body.text();
+        throw new AmorceValidationError(
+          `Tool ${tool} requires approval. Request approval first using client.requestApproval()`
+        );
+      }
+      if (response.statusCode !== 200) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `MCP tool call failed: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+      const data = await response.body.json();
+      return data.result;
+    } catch (e) {
+      if (e instanceof AmorceAPIError || e instanceof AmorceValidationError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`MCP tool call network error: ${e}`);
+    }
+  }
 };
 
 // src/index.ts
-var SDK_VERSION = "2.1.0";
+var SDK_VERSION = "3.0.0";
 var AATP_VERSION = "0.1.0";
 console.log(`Amorce JS SDK v${SDK_VERSION} loaded.`);
 // Annotate the CommonJS export names for ESM import in node:
@@ -507,7 +903,9 @@ console.log(`Amorce JS SDK v${SDK_VERSION} loaded.`);
   EnvVarProvider,
   Envelope,
   IdentityManager,
+  MCPToolClient,
   PriorityLevel,
-  SDK_VERSION
+  SDK_VERSION,
+  verifyRequest
 });
 //# sourceMappingURL=index.js.map

@@ -1,11 +1,18 @@
 /**
  * Amorce SDK for JavaScript/TypeScript
- * Version 2.1.0
+ * Version 3.0.0
  * 
- * Aligned with amorce-py-sdk v0.2.0
+ * Aligned with amorce-py-sdk v0.2.1
+ * 
+ * Major v3.0.0 Updates:
+ * - HITL (Human-in-the-Loop) approval workflow
+ * - MCP Integration for secure tool calling
+ * - verifyRequest() for builders
+ * - toManifestJson() for agent registration
+ * - Full feature parity with Python SDK
  */
 
-export const SDK_VERSION = "2.1.0";
+export const SDK_VERSION = "3.0.0";
 export const AATP_VERSION = "0.1.0";
 
 // Export Exception Classes
@@ -17,10 +24,16 @@ export * from './identity';
 // Export Envelope Module (Legacy/Future Use)
 export * from './envelope';
 
-// Export Client Module
+// Export Client Module (with HITL support)
 export * from './client';
 
-// Export Response Models (v2.1.0)
+// Export Response Models
 export * from './models';
+
+// Export Request Verification (NEW in v3.0.0)
+export * from './verify';
+
+// Export MCP Integration (NEW in v3.0.0)
+export * from './mcp';
 
 console.log(`Amorce JS SDK v${SDK_VERSION} loaded.`);

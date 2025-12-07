@@ -117,6 +117,33 @@ declare class IdentityManager {
      * Matches Python's get_canonical_json_bytes()
      */
     static getCanonicalJsonBytes(payload: any): Uint8Array;
+    /**
+     * Generate agent manifest JSON for registration.
+     * This creates a signed manifest that can be submitted to the Trust Directory.
+     *
+     * @param options - Manifest options
+     * @returns JSON string of the manifest
+     *
+     * @example
+     * ```typescript
+     * const identity = await IdentityManager.generate();
+     * const manifest = identity.toManifestJson({
+     *   name: 'My Restaurant Bot',
+     *   endpoint: 'https://api.example.com/webhook',
+     *   capabilities: ['book_table', 'check_availability'],
+     *   description: 'Fine dining reservations'
+     * });
+     *
+     * // Save or submit to Trust Directory
+     * fs.writeFileSync('manifest.json', manifest);
+     * ```
+     */
+    toManifestJson(options: {
+        name: string;
+        endpoint: string;
+        capabilities: string[];
+        description?: string;
+    }): string;
 }
 
 /**
@@ -279,15 +306,227 @@ declare class AmorceClient {
      * @returns AmorceResponse with transaction details
      */
     transact(serviceContract: ServiceContract, payload: Record<string, any>, priority?: AmorcePriority, idempotencyKey?: string): Promise<AmorceResponse>;
+    /**
+     * Request human approval for a transaction (HITL - Human-in-the-Loop).
+     *
+     * @param options - Approval request options
+     * @returns Approval ID for tracking
+     *
+     * @example
+     * ```typescript
+     * const approvalId = await client.requestApproval({
+     *   transactionId: 'tx_123',
+     *   summary: 'Book table for 4 guests',
+     *   details: { restaurant: 'Le Petit Bistro', date: '2025-12-05' },
+     *   timeoutSeconds: 300  // 5 minutes
+     * });
+     * ```
+     */
+    requestApproval(options: {
+        transactionId?: string;
+        summary: string;
+        details: any;
+        timeoutSeconds?: number;
+    }): Promise<string>;
+    /**
+     * Check the status of an approval request.
+     *
+     * @param approvalId - The approval ID to check
+     * @returns Approval status object
+     *
+     * @example
+     * ```typescript
+     * const status = await client.checkApproval(approvalId);
+     * if (status.status === 'approved') {
+     *   // Proceed with transaction
+     * }
+     * ```
+     */
+    checkApproval(approvalId: string): Promise<{
+        status: 'pending' | 'approved' | 'rejected' | 'expired';
+        approvedBy?: string;
+        timestamp?: string;
+        comments?: string;
+    }>;
+    /**
+     * Submit a decision for an approval request.
+     * Typically called by the human approval interface.
+     *
+     * @param options - Approval decision options
+     *
+     * @example
+     * ```typescript
+     * await client.submitApproval({
+     *   approvalId: 'appr_123',
+     *   decision: 'approve',
+     *   approvedBy: 'user@example.com',
+     *   comments: 'Looks good!'
+     * });
+     * ```
+     */
+    submitApproval(options: {
+        approvalId: string;
+        decision: 'approve' | 'reject';
+        approvedBy: string;
+        comments?: string;
+    }): Promise<void>;
+}
+
+/**
+ * Amorce Request Verification Module (v3.0.0)
+ * For builders to verify incoming signed requests from other agents.
+ *
+ * Matches Python SDK's verify_request() function.
+ */
+interface VerifyRequestOptions {
+    headers: Record<string, string>;
+    body: Buffer | string;
+    allowedIntents?: string[];
+    publicKey?: string;
+    directoryUrl?: string;
+}
+interface VerifiedRequest {
+    agentId: string;
+    payload: any;
+    signature: string;
+}
+/**
+ * Verify an incoming signed request from another agent.
+ *
+ * This function:
+ * 1. Extracts the signature and agent ID from headers
+ * 2. Fetches the agent's public key from the Trust Directory (or uses provided key)
+ * 3. Verifies the Ed25519 signature
+ * 4. Optionally validates that the intent is in the allowed list
+ *
+ * @param options - Verification options
+ * @returns Verified request with agent ID and parsed payload
+ * @throws AmorceSecurityError if verification fails
+ * @throws AmorceValidationError if intent not allowed
+ *
+ * @example
+ * ```typescript
+ * // Express/Fastify route handler
+ * app.post('/api/v1/webhook', async (req, res) => {
+ *   try {
+ *     const verified = await verifyRequest({
+ *       headers: req.headers,
+ *       body: req.body,
+ *       allowedIntents: ['book_table', 'cancel_reservation']
+ *     });
+ *
+ *     console.log(`Verified request from agent: ${verified.agentId}`);
+ *     // Process the verified request...
+ *
+ *   } catch (error) {
+ *     if (error instanceof AmorceSecurityError) {
+ *       return res.status(401).json({ error: 'Unauthorized' });
+ *     }
+ *     throw error;
+ *   }
+ * });
+ * ```
+ */
+declare function verifyRequest(options: VerifyRequestOptions): Promise<VerifiedRequest>;
+
+/**
+ * Amorce MCP Tool Client (v3.0.0)
+ * Integration with Model Context Protocol (MCP) servers through Amorce wrapper.
+ *
+ * Provides cryptographic signing and HITL approvals for MCP tool calls.
+ */
+
+interface MCPTool {
+    name: string;
+    description: string;
+    requiresApproval: boolean;
+    parameters: any;
+    server: string;
+}
+/**
+ * Client for calling MCP tools through the Amorce wrapper.
+ * Adds Ed25519 signatures and HITL approvals to MCP tool calls.
+ *
+ * @example
+ * ```typescript
+ * const identity = await IdentityManager.generate();
+ * const mcp = new MCPToolClient(identity, 'http://localhost:5001');
+ *
+ * // List available tools
+ * const tools = await mcp.listTools();
+ *
+ * // Call a tool
+ * const result = await mcp.callTool('filesystem', 'read_file', {
+ *   path: '/tmp/data.txt'
+ * });
+ * ```
+ */
+declare class MCPToolClient {
+    private identity;
+    private wrapperUrl;
+    private agentId;
+    constructor(identity: IdentityManager, wrapperUrl: string);
+    /**
+     * List all available MCP tools across all servers.
+     *
+     * @returns Array of available tools with metadata
+     *
+     * @example
+     * ```typescript
+     * const tools = await mcp.listTools();
+     * for (const tool of tools) {
+     *   const hitl = tool.requiresApproval ? '🔒' : '✓';
+     *   console.log(`${hitl} ${tool.name}: ${tool.description}`);
+     * }
+     * ```
+     */
+    listTools(): Promise<MCPTool[]>;
+    /**
+     * Call an MCP tool with signed request.
+     *
+     * For tools that require approval (write/delete operations), you must provide
+     * an approvalId obtained through the HITL workflow.
+     *
+     * @param server - MCP server name (e.g., 'filesystem', 'brave-search')
+     * @param tool - Tool name (e.g., 'read_file', 'write_file')
+     * @param args - Tool-specific arguments
+     * @param approvalId - Optional approval ID for tools requiring HITL
+     * @returns Tool execution result
+     *
+     * @throws AmorceValidationError if tool requires approval and none provided
+     *
+     * @example
+     * ```typescript
+     * // Read operation (no approval needed)
+     * const content = await mcp.callTool('filesystem', 'read_file', {
+     *   path: '/tmp/data.txt'
+     * });
+     *
+     * // Write operation (approval required)
+     * const approvalId = await client.requestApproval({...});
+     * await mcp.callTool('filesystem', 'write_file', {
+     *   path: '/tmp/output.txt',
+     *   content: 'Hello!'
+     * }, approvalId);
+     * ```
+     */
+    callTool(server: string, tool: string, args: any, approvalId?: string): Promise<any>;
 }
 
 /**
  * Amorce SDK for JavaScript/TypeScript
- * Version 2.1.0
+ * Version 3.0.0
  *
- * Aligned with amorce-py-sdk v0.2.0
+ * Aligned with amorce-py-sdk v0.2.1
+ *
+ * Major v3.0.0 Updates:
+ * - HITL (Human-in-the-Loop) approval workflow
+ * - MCP Integration for secure tool calling
+ * - verifyRequest() for builders
+ * - toManifestJson() for agent registration
+ * - Full feature parity with Python SDK
  */
-declare const SDK_VERSION = "2.1.0";
+declare const SDK_VERSION = "3.0.0";
 declare const AATP_VERSION = "0.1.0";
 
-export { AATP_VERSION, AmorceAPIError, AmorceClient, type AmorceConfig, AmorceConfigError, AmorceEnvelope, AmorceError, AmorceNetworkError, type AmorcePriority, type AmorceResponse, AmorceResponseImpl, AmorceSecurityError, AmorceValidationError, EnvVarProvider, Envelope, IdentityManager, type IdentityProvider, PriorityLevel, SDK_VERSION, type SenderInfo, type ServiceContract, type SettlementInfo, type TransactionResult };
+export { AATP_VERSION, AmorceAPIError, AmorceClient, type AmorceConfig, AmorceConfigError, AmorceEnvelope, AmorceError, AmorceNetworkError, type AmorcePriority, type AmorceResponse, AmorceResponseImpl, AmorceSecurityError, AmorceValidationError, EnvVarProvider, Envelope, IdentityManager, type IdentityProvider, type MCPTool, MCPToolClient, PriorityLevel, SDK_VERSION, type SenderInfo, type ServiceContract, type SettlementInfo, type TransactionResult, type VerifiedRequest, type VerifyRequestOptions, verifyRequest };

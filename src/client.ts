@@ -240,4 +240,186 @@ export class AmorceClient {
       throw new AmorceNetworkError(`Transaction network error: ${e}`);
     }
   }
+
+  /**
+   * Request human approval for a transaction (HITL - Human-in-the-Loop).
+   * 
+   * @param options - Approval request options
+   * @returns Approval ID for tracking
+   * 
+   * @example
+   * ```typescript
+   * const approvalId = await client.requestApproval({
+   *   transactionId: 'tx_123',
+   *   summary: 'Book table for 4 guests',
+   *   details: { restaurant: 'Le Petit Bistro', date: '2025-12-05' },
+   *   timeoutSeconds: 300  // 5 minutes
+   * });
+   * ```
+   */
+  public async requestApproval(options: {
+    transactionId?: string;
+    summary: string;
+    details: any;
+    timeoutSeconds?: number;
+  }): Promise<string> {
+    const requestBody = {
+      transaction_id: options.transactionId,
+      summary: options.summary,
+      details: options.details,
+      timeout_seconds: options.timeoutSeconds || 300,
+      agent_id: this.agentId,
+      requested_at: new Date().toISOString()
+    };
+
+    const canonicalBytes = IdentityManager.getCanonicalJsonBytes(requestBody);
+    const signature = await this.identity.sign(canonicalBytes);
+
+    const headers: Record<string, string> = {
+      'X-Agent-Signature': signature,
+      'X-Amorce-Agent-ID': this.agentId,
+      'Content-Type': 'application/json'
+    };
+
+    const url = `${this.orchestratorUrl}/api/v1/approvals`;
+
+    try {
+      const response = await request(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.statusCode !== 201 && response.statusCode !== 200) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `Failed to request approval: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+
+      const data = await response.body.json() as any;
+      return data.approval_id;
+    } catch (e) {
+      if (e instanceof AmorceAPIError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`Approval request network error: ${e}`);
+    }
+  }
+
+  /**
+   * Check the status of an approval request.
+   * 
+   * @param approvalId - The approval ID to check
+   * @returns Approval status object
+   * 
+   * @example
+   * ```typescript
+   * const status = await client.checkApproval(approvalId);
+   * if (status.status === 'approved') {
+   *   // Proceed with transaction
+   * }
+   * ```
+   */
+  public async checkApproval(approvalId: string): Promise<{
+    status: 'pending' | 'approved' | 'rejected' | 'expired';
+    approvedBy?: string;
+    timestamp?: string;
+    comments?: string;
+  }> {
+    const url = `${this.orchestratorUrl}/api/v1/approvals/${approvalId}`;
+
+    const headers: Record<string, string> = {
+      'X-Amorce-Agent-ID': this.agentId,
+      'Content-Type': 'application/json'
+    };
+
+    try {
+      const response = await request(url, {
+        method: 'GET',
+        headers: headers
+      });
+
+      if (response.statusCode !== 200) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `Failed to check approval: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+
+      return await response.body.json() as any;
+    } catch (e) {
+      if (e instanceof AmorceAPIError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`Approval check network error: ${e}`);
+    }
+  }
+
+  /**
+   * Submit a decision for an approval request.
+   * Typically called by the human approval interface.
+   * 
+   * @param options - Approval decision options
+   * 
+   * @example
+   * ```typescript
+   * await client.submitApproval({
+   *   approvalId: 'appr_123',
+   *   decision: 'approve',
+   *   approvedBy: 'user@example.com',
+   *   comments: 'Looks good!'
+   * });
+   * ```
+   */
+  public async submitApproval(options: {
+    approvalId: string;
+    decision: 'approve' | 'reject';
+    approvedBy: string;
+    comments?: string;
+  }): Promise<void> {
+    const requestBody = {
+      decision: options.decision,
+      approved_by: options.approvedBy,
+      comments: options.comments,
+      timestamp: new Date().toISOString()
+    };
+
+    const canonicalBytes = IdentityManager.getCanonicalJsonBytes(requestBody);
+    const signature = await this.identity.sign(canonicalBytes);
+
+    const headers: Record<string, string> = {
+      'X-Agent-Signature': signature,
+      'X-Amorce-Agent-ID': this.agentId,
+      'Content-Type': 'application/json'
+    };
+
+    const url = `${this.orchestratorUrl}/api/v1/approvals/${options.approvalId}/submit`;
+
+    try {
+      const response = await request(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.statusCode !== 200 && response.statusCode !== 204) {
+        const errorText = await response.body.text();
+        throw new AmorceAPIError(
+          `Failed to submit approval: ${response.statusCode}`,
+          response.statusCode,
+          errorText
+        );
+      }
+    } catch (e) {
+      if (e instanceof AmorceAPIError) {
+        throw e;
+      }
+      throw new AmorceNetworkError(`Approval submission network error: ${e}`);
+    }
+  }
 }
