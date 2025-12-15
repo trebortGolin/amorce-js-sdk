@@ -717,7 +717,17 @@ This project is licensed under the MIT License.
 
 ## 📝 Changelog
 
-### v3.0.0 (2025-12-07) 🆕
+### v3.1.0 (2025-12-15) 🆕
+
+**A2A Discovery: Make Your Agent Discoverable**
+
+* **[NEW]** `serveWellKnown()` - Express middleware to serve `/.well-known/agent.json`
+* **[NEW]** `createWellKnownHandler()` - Next.js App Router handler for A2A manifest
+* **[NEW]** `fetchManifest()` - Fetch A2A manifest from Amorce Directory
+* **[NEW]** `generateManifestJson()` - Generate static manifest JSON for deployment
+* **[ENHANCEMENT]** Aligned with Python SDK v0.2.2
+
+### v3.0.0 (2025-12-07)
 
 **MAJOR RELEASE - Full Feature Parity with Python SDK v0.2.1!**
 
@@ -749,6 +759,56 @@ This project is licensed under the MIT License.
 * **[ENHANCEMENT]** 15 new unit tests for all features
 * **[BREAKING]** Major version bump (v2.x → v3.x)
 * **[ALIGNED]** 100% feature parity with Python SDK v0.2.1
+
+---
+
+## 🌐 A2A Discovery: Make Your Agent Discoverable (NEW in v3.1.0)
+
+**Register your agent and instantly make it discoverable in the A2A ecosystem.**
+
+### Express Middleware
+
+```typescript
+import express from 'express';
+import { serveWellKnown } from '@amorce/sdk';
+
+const app = express();
+
+// Add /.well-known/agent.json route with one line!
+app.use(serveWellKnown({ agentId: 'your-registered-agent-id' }));
+```
+
+### Next.js App Router
+
+```typescript
+// app/.well-known/agent.json/route.ts
+import { createWellKnownHandler } from '@amorce/sdk';
+
+export const GET = createWellKnownHandler({ agentId: 'your-agent-id' });
+```
+
+### Fetch Manifest Programmatically
+
+```typescript
+import { fetchManifest } from '@amorce/sdk';
+
+const manifest = await fetchManifest('your-agent-id');
+console.log(manifest);
+// {
+//   name: "My Agent",
+//   url: "https://my-agent.com",
+//   protocol_version: "A2A/1.0",
+//   authentication: { type: "amorce", public_key: "..." }
+// }
+```
+
+### Why A2A Discovery Matters
+
+- 🔍 **Discoverable** - Other agents can find and verify your agent
+- 🔐 **Trusted** - Public key distributed via trusted directory
+- 🔗 **Interoperable** - Works with Google A2A, MCP, and Amorce protocols
+
+---
 
 ### v2.1.0 (2025-11-30)
 * **[FEATURE]** HTTP/2 support via `undici` for multiplexed connections and better performance

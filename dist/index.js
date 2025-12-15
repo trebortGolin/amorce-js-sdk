@@ -46,6 +46,10 @@ __export(index_exports, {
   MCPToolClient: () => MCPToolClient,
   PriorityLevel: () => PriorityLevel,
   SDK_VERSION: () => SDK_VERSION,
+  createWellKnownHandler: () => createWellKnownHandler,
+  fetchManifest: () => fetchManifest,
+  generateManifestJson: () => generateManifestJson,
+  serveWellKnown: () => serveWellKnown,
   verifyRequest: () => verifyRequest
 });
 module.exports = __toCommonJS(index_exports);
@@ -884,8 +888,89 @@ var MCPToolClient = class {
   }
 };
 
+// src/wellKnown.ts
+var AMORCE_DIRECTORY_URL = "https://amorce-trust-api-425870997313.us-central1.run.app";
+async function fetchManifest(agentId, directoryUrl = AMORCE_DIRECTORY_URL) {
+  const url = `${directoryUrl}/api/v1/agents/${agentId}/manifest`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch manifest: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
+function serveWellKnown(options) {
+  const {
+    agentId,
+    directoryUrl = AMORCE_DIRECTORY_URL,
+    cacheTtl = 300
+  } = options;
+  let cachedManifest = null;
+  let cachedAt = 0;
+  return async (req, res, next) => {
+    if (req.path !== "/.well-known/agent.json") {
+      return next();
+    }
+    const now = Date.now() / 1e3;
+    if (cachedManifest && now - cachedAt < cacheTtl) {
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Cache-Control", `public, max-age=${cacheTtl}`);
+      return res.json(cachedManifest);
+    }
+    try {
+      cachedManifest = await fetchManifest(agentId, directoryUrl);
+      cachedAt = now;
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Cache-Control", `public, max-age=${cacheTtl}`);
+      res.json(cachedManifest);
+    } catch (error) {
+      console.error("Failed to fetch A2A manifest:", error.message);
+      res.status(500).json({ error: "Failed to fetch agent manifest" });
+    }
+  };
+}
+function createWellKnownHandler(options) {
+  const {
+    agentId,
+    directoryUrl = AMORCE_DIRECTORY_URL,
+    cacheTtl = 300
+  } = options;
+  let cachedManifest = null;
+  let cachedAt = 0;
+  return async (req) => {
+    const now = Date.now() / 1e3;
+    if (cachedManifest && now - cachedAt < cacheTtl) {
+      return new Response(JSON.stringify(cachedManifest), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": `public, max-age=${cacheTtl}`
+        }
+      });
+    }
+    try {
+      cachedManifest = await fetchManifest(agentId, directoryUrl);
+      cachedAt = now;
+      return new Response(JSON.stringify(cachedManifest), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": `public, max-age=${cacheTtl}`
+        }
+      });
+    } catch (error) {
+      console.error("Failed to fetch A2A manifest:", error.message);
+      return new Response(JSON.stringify({ error: "Failed to fetch agent manifest" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  };
+}
+async function generateManifestJson(agentId, directoryUrl = AMORCE_DIRECTORY_URL) {
+  const manifest = await fetchManifest(agentId, directoryUrl);
+  return JSON.stringify(manifest, null, 2);
+}
+
 // src/index.ts
-var SDK_VERSION = "3.0.0";
+var SDK_VERSION = "3.1.0";
 var AATP_VERSION = "0.1.0";
 console.log(`Amorce JS SDK v${SDK_VERSION} loaded.`);
 // Annotate the CommonJS export names for ESM import in node:
@@ -906,6 +991,10 @@ console.log(`Amorce JS SDK v${SDK_VERSION} loaded.`);
   MCPToolClient,
   PriorityLevel,
   SDK_VERSION,
+  createWellKnownHandler,
+  fetchManifest,
+  generateManifestJson,
+  serveWellKnown,
   verifyRequest
 });
 //# sourceMappingURL=index.js.map

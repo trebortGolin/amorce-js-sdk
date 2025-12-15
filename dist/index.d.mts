@@ -514,19 +514,97 @@ declare class MCPToolClient {
 }
 
 /**
+ * A2A Well-Known Manifest Helper
+ *
+ * Provides easy integration for serving /.well-known/agent.json endpoints
+ * to make your agent discoverable in the A2A ecosystem.
+ */
+interface ManifestOptions {
+    agentId: string;
+    directoryUrl?: string;
+    cacheTtl?: number;
+}
+interface A2AManifest {
+    name: string;
+    url: string;
+    version: string;
+    description: string;
+    protocol_version: string;
+    capabilities: string[];
+    authentication: {
+        type: string;
+        public_key: string;
+        algorithm: string;
+        directory_url: string;
+    };
+    amorce: {
+        agent_id: string;
+        status: string;
+        registered_at: string;
+        category: string;
+    };
+}
+/**
+ * Fetch the A2A manifest for an agent from the Amorce Directory.
+ */
+declare function fetchManifest(agentId: string, directoryUrl?: string): Promise<A2AManifest>;
+/**
+ * Express middleware to serve /.well-known/agent.json
+ *
+ * @example
+ * ```typescript
+ * import express from 'express';
+ * import { serveWellKnown } from '@amorce/sdk';
+ *
+ * const app = express();
+ * app.use(serveWellKnown({ agentId: 'my-agent-id' }));
+ * ```
+ */
+declare function serveWellKnown(options: ManifestOptions): (req: any, res: any, next: any) => Promise<any>;
+/**
+ * Next.js API route handler for /.well-known/agent.json
+ *
+ * @example
+ * ```typescript
+ * // pages/api/.well-known/agent.json.ts (Next.js Pages Router)
+ * // or app/.well-known/agent.json/route.ts (Next.js App Router)
+ *
+ * import { createWellKnownHandler } from '@amorce/sdk';
+ *
+ * export const GET = createWellKnownHandler({ agentId: 'my-agent-id' });
+ * ```
+ */
+declare function createWellKnownHandler(options: ManifestOptions): (req: Request) => Promise<Response>;
+/**
+ * Generate a static manifest JSON that can be deployed as a file.
+ *
+ * @example
+ * ```typescript
+ * import { generateManifestJson } from '@amorce/sdk';
+ *
+ * const manifest = await generateManifestJson('my-agent-id');
+ * // Save to .well-known/agent.json
+ * ```
+ */
+declare function generateManifestJson(agentId: string, directoryUrl?: string): Promise<string>;
+
+/**
  * Amorce SDK for JavaScript/TypeScript
- * Version 3.0.0
+ * Version 3.1.0
  *
- * Aligned with amorce-py-sdk v0.2.1
+ * Aligned with amorce-py-sdk v0.2.2
  *
- * Major v3.0.0 Updates:
+ * v3.1.0 Updates:
+ * - A2A Well-Known manifest helpers for agent discoverability
+ *
+ * v3.0.0 Updates:
  * - HITL (Human-in-the-Loop) approval workflow
  * - MCP Integration for secure tool calling
  * - verifyRequest() for builders
  * - toManifestJson() for agent registration
  * - Full feature parity with Python SDK
  */
-declare const SDK_VERSION = "3.0.0";
+declare const SDK_VERSION = "3.1.0";
 declare const AATP_VERSION = "0.1.0";
 
-export { AATP_VERSION, AmorceAPIError, AmorceClient, type AmorceConfig, AmorceConfigError, AmorceEnvelope, AmorceError, AmorceNetworkError, type AmorcePriority, type AmorceResponse, AmorceResponseImpl, AmorceSecurityError, AmorceValidationError, EnvVarProvider, Envelope, IdentityManager, type IdentityProvider, type MCPTool, MCPToolClient, PriorityLevel, SDK_VERSION, type SenderInfo, type ServiceContract, type SettlementInfo, type TransactionResult, type VerifiedRequest, type VerifyRequestOptions, verifyRequest };
+export { type A2AManifest, AATP_VERSION, AmorceAPIError, AmorceClient, type AmorceConfig, AmorceConfigError, AmorceEnvelope, AmorceError, AmorceNetworkError, type AmorcePriority, type AmorceResponse, AmorceResponseImpl, AmorceSecurityError, AmorceValidationError, EnvVarProvider, Envelope, IdentityManager, type IdentityProvider, type MCPTool, MCPToolClient, type ManifestOptions, PriorityLevel, SDK_VERSION, type SenderInfo, type ServiceContract, type SettlementInfo, type TransactionResult, type VerifiedRequest, type VerifyRequestOptions, createWellKnownHandler, fetchManifest, generateManifestJson, serveWellKnown, verifyRequest };
