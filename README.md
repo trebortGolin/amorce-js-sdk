@@ -5,11 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Demo](https://img.shields.io/badge/demo-marketplace-success.svg)](https://github.com/trebortGolin/agent-marketplace-demo)
 
-**Official TypeScript/JavaScript SDK for the Amorce Agent Transaction Protocol (AATP).**
+**Connect your JS/TS agent to LangChain, CrewAI, n8n, and major LLMs — in 5 minutes.**
 
-**See it in action**: [Agent Marketplace Demo](https://github.com/trebortGolin/agent-marketplace-demo) - Watch AI agents negotiate with cryptographic security
+The Amorce SDK enables cross-framework agent communication. Make your agent discoverable and callable by any framework or LLM (ChatGPT, Claude, Gemini) without custom API integrations.
 
-The Amorce SDK allows any JavaScript application (Node.js or Browser) to become a verified node in the **Agent Economy**. It provides the cryptographic primitives (Ed25519 via `libsodium`) and the transport layer required to transact securely with AI Agents (OpenAI, Google Gemini, Apple Intelligence).
+**See it in action**: [Agent Marketplace Demo](https://github.com/trebortGolin/agent-marketplace-demo)
 
 ---
 
